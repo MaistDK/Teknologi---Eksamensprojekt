@@ -1,0 +1,75 @@
+// the value of the 'other' resistor
+#define SERIESRESISTOR 10000    
+ 
+// What pin to connect the sensor to
+#define THERMISTORPIN 3
+// The beta coefficient of the thermistor (usually 3000-4000)
+#define BCOEFFICIENT 3950
+// the value of the 'other' resistor
+#define SERIESRESISTOR 10000
+// resistance at 25 degrees C
+#define THERMISTORNOMINAL 10000
+// temp. for nominal resistance (almost always 25 C)
+#define TEMPERATURENOMINAL 25 
+#define NUMSAMPLES 10
+
+int samples[NUMSAMPLES];
+
+void setup(void) {
+  //Serial.begin(9600);
+  pinMode(0, OUTPUT);
+  pinMode(2, INPUT);
+  pinMode(1, OUTPUT);
+  digitalWrite(1, HIGH);
+}
+ 
+void loop(void) {
+
+  float average;
+ 
+  // take N samples in a row, with a slight delay
+  for (int i=0; i< NUMSAMPLES; i++) {
+   samples[i] = analogRead(THERMISTORPIN);
+   delay(10);
+  }
+ 
+  // average all the samples out
+  average = 0;
+  for (int i=0; i< NUMSAMPLES; i++) {
+     average += samples[i];
+  }
+  average /= NUMSAMPLES;
+  
+  // convert the value to resistance
+  float voltage = average * (5.0/1023);
+  average = voltage * SERIESRESISTOR;
+  average = average / (voltage - 5.0);
+  average = average * (-1);
+  //average = (1023 / average)  - 1;     // (1023/ADC - 1) 
+  //average = SERIESRESISTOR / average;  // 10K / (1023/ADC - 1)
+  //Serial.print("Thermistor resistance "); 
+  //Serial.println(average);
+  
+  float steinhart;
+  steinhart = average / THERMISTORNOMINAL;     // (R/Ro)
+  steinhart = log(steinhart);                  // ln(R/Ro)
+  steinhart /= BCOEFFICIENT;                   // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart;                 // Invert
+  steinhart -= 273.15;                         // convert absolute temp to C
+
+  if(steinhart > 30)
+  {
+    digitalWrite(0, HIGH);
+  }
+  if(steinhart < 30)
+  {
+    digitalWrite(0, LOW);
+  }
+  
+  //Serial.print("Temperature "); 
+  //Serial.print(steinhart);
+  //Serial.println(" *C");
+ 
+  delay(1000);
+}
